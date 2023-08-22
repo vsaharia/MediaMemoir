@@ -39,10 +39,10 @@ const NoteForm = ({createNote}) => {
         })
         setNewTitle('')
         setNewAuthor('')
-        setNewGenre('')
-        setNewMonth('')
-        setNewYear('')
-        setNewRating('')
+        setNewGenre(genres[0])
+        setNewMonth(months[0])
+        setNewYear(years[0])
+        setNewRating(ratings[0])
         setNewReview('')
     }
 
