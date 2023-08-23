@@ -7,9 +7,12 @@ import Toggle from './components/Toggle'
 import noteService from './services/notes'
 import loginService from './services/login'
 import {Button} from 'react-bootstrap'
+
 import './index.css'
 
 const App = () => {
+
+  const jose = require('jose')
 
   const years = Array.from(
     { length: 50 },
@@ -23,17 +26,61 @@ const App = () => {
   const [user, setUser] = useState(null)
 
   const noteFormRef = useRef()
-  
-  const checkLoggedIn = () => {
-    const userDetails = window.localStorage.getItem('loggedInUser')
-    if (userDetails) {
-      const user = JSON.parse(userDetails)
-      setUser(user)
-      noteService.setToken(user.token)
+
+  let tokenInterval = null;
+
+  const checkTokenExpired = async () => {
+    console.log('checking token expiry')
+    try {
+      await noteService
+        .create({
+          title: 'random',
+          important: false,
+          genre: 'test',
+          author: 'test',
+          month: 'January',
+          year: '1',
+          rating: 5,
+          review: 'this request is for token verification purposes.'
+        })
+    }
+    catch(exception) {
+      document.getElementById('logoutButton').click()
+      clearInterval(tokenInterval)
+      tokenInterval = null
+      setErrorMessage("Logged out automatically after 1 hour.")
+      setTimeout(() => {
+        setErrorMessage(null)
+      }, 3000)
     }
   }
 
-  useEffect(checkLoggedIn, [])
+  useEffect(() => {
+    const checkLoggedIn = async () => {
+      const userDetails = window.localStorage.getItem('loggedInUser')
+      if (userDetails) {
+        const user = JSON.parse(userDetails)
+        const secret = new TextEncoder().encode(
+          process.env.REACT_APP_SECRET,
+        )
+        try {
+          const decodedToken = await jose.jwtVerify(user.token, secret)
+          console.log(decodedToken)
+          if (decodedToken.payload) {
+            setUser(user)
+            noteService.setToken(user.token)
+          }
+        }
+        catch {
+          noteService.setToken(null)
+          setUser(null)
+          window.localStorage.removeItem('loggedInUser')
+        }
+      }
+    }
+    checkLoggedIn()
+  }, [])
+
   useEffect(() => {
     function grabNotes() {
       if (user) {
@@ -63,6 +110,7 @@ const App = () => {
       setUser(user)
       setUsername('')
       setPassword('')
+      tokenInterval = setInterval(checkTokenExpired, 1000*60*60)
     }
     catch (exception) {
       setUsername('')
@@ -139,7 +187,7 @@ const App = () => {
   )
 
   const logoutButton = () => (
-    <Button onClick={handleLogout}>
+    <Button id="logoutButton" onClick={handleLogout}>
       Sign out
     </Button>
   )
@@ -171,13 +219,6 @@ const App = () => {
       }
       return null;
     })
-    /*notesToShow.map(note => 
-      <Note 
-        key={note.id}
-        note={note} 
-        toggleImportance={() => toggleImportanceOf(note.id)}
-      />
-    )*/
   )
 
   return (

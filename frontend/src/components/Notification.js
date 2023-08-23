@@ -11,6 +11,10 @@ const Notification = ({message}) => {
     if (message.startsWith('Success')) {
         type = 'success'
     }
+
+    if (message.startsWith('Logged')) {
+        type = 'info'
+    }
     
     return (
         <Alert variant={type}>
